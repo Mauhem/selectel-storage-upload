@@ -56,17 +56,18 @@ function selupload_cloudUpload($postID)
             $connection = new Connection(get_option('selupload_username'), get_option('selupload_pass'),
                 array('authurl' => 'https://' . get_option('selupload_auth') . '/'), 15);
             $container = $connection->getContainer(get_option('selupload_container'));
-
             if (is_readable($file)) {
-                $fp = fopen($file, 'r');
-                $object = $container->createObject(selupload_getName($file));
-                $object->write($fp);
-                @fclose($fp);
-                if (wp_attachment_is_image($postID) == false) {
-                    $object = $container->getObject(selupload_getName($file));
-                    if ((($object instanceof \OpenStackStorage\Object) == true) and (get_option('selupload_delafter') == 1)
-                    ) {
-                        @unlink($file);
+                if (((get_option('selupload_notoverewrite') == true) and ($container->getObject(selupload_getName($file))->getSize() == sizeof($file))) == false) {
+                    $fp = fopen($file, 'r');
+                    $object = $container->createObject(selupload_getName($file));
+                    $object->write($fp);
+                    @fclose($fp);
+                    if (wp_attachment_is_image($postID) == false) {
+                        $object = $container->getObject(selupload_getName($file));
+                        if ((($object instanceof \OpenStackStorage\Object) == true) and (get_option('selupload_delafter') == 1)
+                        ) {
+                            @unlink($file);
+                        }
                     }
                 }
             }
@@ -94,6 +95,9 @@ function selupload_thumbUpload($metadata)
                 if (isset($thumb['file'])) {
                     $path = $dir . DIRECTORY_SEPARATOR . $thumb['file'];
                     if ((is_readable($path)) and (selupload_checkForSync($path))) {
+
+                        if (((get_option('selupload_notoverewrite') == true) and ($container->getObject(selupload_getName($path))->getSize() == sizeof($path))) == false) {
+
                         $fp = fopen($path, 'r');
                         $object = $container->createObject(selupload_getName($path));
                         $object->write($fp);
@@ -101,6 +105,8 @@ function selupload_thumbUpload($metadata)
                         $object = $container->getObject(selupload_getName($path));
                         if ((($object instanceof \OpenStackStorage\Object) == true) and (get_option('selupload_delafter') == 1)) {
                             @unlink($path);
+
+                        }
                         }
                     }
                 }
@@ -131,6 +137,9 @@ function selupload_isDirEmpty($dir)
     return (count(scandir($dir)) == 2);
 }
 
+/**
+ * @param string $pattern
+ */
 function selupload_globRecursive($pattern, $flags = 0)
 {
     $files = glob($pattern, $flags);
@@ -271,257 +280,270 @@ function selupload_settingsPage()
             ); ?>/img/loading.gif" alt="Loading"/>
     </div>
     <div class="wrap" id="selupload_wrap">
-    <div id="selupload_message" style="display: none"></div>
-    <table>
-    <tr>
-    <td>
-        <h2><?php _e('Settings', 'selupload'); ?> Selectel Storage</h2>
-        <?php
-        // Default settings
-        if (get_option('upload_path') == 'wp-content' . DIRECTORY_SEPARATOR . 'uploads' || get_option('upload_path') == null
-        ) {
-            update_option('upload_path', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads');
-        }
-        if (get_option('selupload_auth') == null) {
-            update_option('selupload_auth', 'auth.selcdn.ru');
-        }
-        if (get_option('selupload_filter') == null) {
-            update_option('selupload_filter', '*');
-        }
-        ?>
-        <form method="post" action="options.php">
-            <?php settings_fields('selupload_settings'); ?>
-            <fieldset class="options">
-                <table class="form-table">
-                    <tbody>
-                    <tr>
-                        <td colspan="2"><?php _e(
-                                'Type the information for access to your bucket.',
+        <div id="selupload_message" style="display: none"></div>
+        <table>
+            <tr>
+                <td>
+                    <h2><?php _e('Settings', 'selupload'); ?> Selectel Storage</h2>
+                    <?php
+                    // Default settings
+                    if (get_option('upload_path') == 'wp-content' . DIRECTORY_SEPARATOR . 'uploads' || get_option('upload_path') == null
+                    ) {
+                        update_option('upload_path', WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads');
+                    }
+                    if (get_option('selupload_auth') == null) {
+                        update_option('selupload_auth', 'auth.selcdn.ru');
+                    }
+                    if (get_option('selupload_filter') == null) {
+                        update_option('selupload_filter', '*');
+                    }
+                    ?>
+                    <form method="post" action="options.php">
+                        <?php settings_fields('selupload_settings'); ?>
+                        <fieldset class="options">
+                            <table class="form-table">
+                                <tbody>
+                                <tr>
+                                    <td colspan="2"><?php _e(
+                                            'Type the information for access to your container.',
+                                            'selupload'
+                                        );?> <?php _e('No account? <a href ="http://goo.gl/8Z0q8H">Sign up</a>',
+                                            'selupload'); ?></td>
+                                </tr>
+                                <tr>
+                                    <td><label for="selupload_username"><b><?php _e(
+                                                    'Username',
+                                                    'selupload'
+                                                ); ?>:</b></label></td>
+                                    <td>
+                                        <input id="selupload_username" name="selupload_username" type="text"
+                                               size="15" value="<?php echo esc_attr(
+                                            get_option('selupload_username')
+                                        ); ?>" class="regular-text code"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><label for="selupload_pass"><b><?php _e('Password', 'selupload'); ?>
+                                                :</b></label></td>
+                                    <td>
+                                        <input id="selupload_pass" name="selupload_pass" type="password"
+                                               size="15"
+                                               value="<?php echo esc_attr(get_option('selupload_pass')); ?>"
+                                               class="regular-text code"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><label for="selupload_container"><b><?php _e(
+                                                    'Container',
+                                                    'selupload'
+                                                ); ?>:</b></label></td>
+                                    <td>
+                                        <input id="selupload_container" name="selupload_container"
+                                               type="text" size="15" value="<?php echo esc_attr(
+                                            get_option('selupload_container')
+                                        ); ?>" class="regular-text code"/>
+                                        <input type="button" name="test" id="submit" class="button button-primary"
+                                               value="<?php _e('Check the connection', 'selupload'); ?>"
+                                               onclick="selupload_testConnet()"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><label for="upload_path"><b><?php _e('Local path', 'selupload'); ?>
+                                                :</b></label></td>
+                                    <td>
+                                        <input id="upload_path" name="upload_path" type="text"
+                                               size="15"
+                                               value="<?php echo esc_attr(get_option('upload_path')); ?>"
+                                               class="regular-text code"/>
+
+                                        <p class="description"><?php _e(
+                                                'Local path to the uploaded files. By default',
+                                                'selupload'
+                                            ); ?>: <code>wp-content/uploads</code>
+                                        </p><?php _e('Setting duplicates of the same name from the mediafiles settings. Changing one, you change and other',
+                                            'selupload'); ?>.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><label for="upload_url_path"><b><?php _e(
+                                                    'Full URL-path to files',
+                                                    'selupload'
+                                                ); ?>:</b></label></td>
+                                    <td>
+                                        <input id="upload_url_path" name="upload_url_path" type="text"
+                                               size="15" value="<?php echo esc_attr(
+                                            get_option('upload_url_path')
+                                        ); ?>" class="regular-text code"/>
+
+                                        <p class="description">
+                                            <?php _e(
+                                                'Enter the domain or subdomain if store files only in the Selectel Storage',
+                                                'selupload'
+                                            ); ?>
+                                            <code>(http://uploads.example.com)</code>, <?php _e(
+                                                'or full url path, if only used synchronization',
+                                                'selupload'
+                                            ); ?>
+                                            <code>(http://example.com/wp-content/uploads)</code>.</p>
+                                        <?php _e('Setting duplicates of the same name from the mediafiles settings. Changing one, you change and other',
+                                            'selupload'); ?>.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><label for="selupload_auth"><b><?php _e(
+                                                    'Authorization server',
+                                                    'selupload'
+                                                ); ?>:</b></label></td>
+                                    <td>
+                                        <input id="selupload_auth" name="selupload_auth" type="text"
+                                               size="15"
+                                               value="<?php echo esc_attr(get_option('selupload_auth')); ?>"
+                                               class="regular-text code"/>
+
+                                        <p class="description"><?php _e('By default', 'selupload'); ?>: <code>auth.selcdn.ru</code>
+                                        </p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><label for="selupload_filter"><b><?php _e(
+                                                    'Mask files',
+                                                    'selupload'
+                                                ); ?>:</b></label></td>
+                                    <td>
+                                        <input id="selupload_filter" name="selupload_filter" type="text"
+                                               size="15"
+                                               value="<?php echo esc_attr(get_option('selupload_filter')); ?>"
+                                               class="regular-text code"/>
+
+                                        <p class="description"><?php _e('By default', 'selupload'); ?>:
+                                            <code>*</code> <?php _e('for all files, 2 or more values separated by a comma (for example: ',
+                                                'selupload'); ?> <code>*.jpg,*.png,n?ame.png</code>)
+                                        </p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <p><b><?php _e('Synchronization settings', 'selupload'); ?>:</b></p>
+
+                                        <p>
+                                            <input id="onlystorage" type="checkbox" name="selupload_delafter"
+                                                   value="1" <?php checked(get_option('selupload_delafter'), 1); ?> />
+                                            <label for="onlystorage"><?php _e(
+                                                    'Store files only in the Selectel Storage',
+                                                    'selupload'
+                                                ); ?></label>
+                                            <code>(<?php _e(
+                                                    'to attach a domain / subdomain to store and specify the settings',
+                                                    'selupload'
+                                                ); ?>).</code></p>
+
+                                        <p class="description"><?php _e('The file will be deleted from the hosting after a successful download. It will only copy in the Selectel Storage',
+                                                'selupload'); ?>.</p>
+
+                                        <p>
+                                            <input id="selupload_del" type="checkbox" name="selupload_del"
+                                                   value="1" <?php checked(
+                                                get_option('selupload_del'),
+                                                1
+                                            ); ?> />
+                                            <label for="selupload_del"><?php _e(
+                                                    'Delete files from the Selectel Storage if they are removed from the library',
+                                                    'selupload'
+                                                ); ?>.</label></p>
+
+                                        <p>
+                                            <input id="selupload_notoverewrite" type="checkbox"
+                                                   name="selupload_notoverewrite"
+                                                   value="1" <?php checked(
+                                                get_option('selupload_notoverewrite'),
+                                                1
+                                            ); ?> />
+                                            <label
+                                                for="selupload_notoverewrite"><?php _e('Do not overwrite the file if it already exists in the storage',
+                                                    'selupload'); ?>.</label></p>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                            <input type="hidden" name="action" value="update"/>
+                            <?php submit_button(); ?>
+                        </fieldset>
+                    </form>
+                    <div id="selupload_progressBar">
+                        <div></div>
+                    </div>
+                    <div id="selupload_synchtext" style="display: none" class="error"></div>
+                    <script type="text/javascript" language="JavaScript">
+                        <?php
+                            $files = selupload_getFilesArr(get_option('upload_path'));
+                            echo 'var files_arr = '.json_encode(implode('||',$files)).';'."\n".'var files_count = '.count($files).';'."\n";
+                        ?>
+                    </script>
+                    <form method="post">
+                        <input type="button" name="archive" id="submit" class="synch button button-primary"
+                               value="<?php _e('Full synchronization', 'selupload'); ?>"
+                               onclick="selupload_mansynch(files_arr,files_count)"/>
+                        <input type="button" name="archive" id="submit" class="synch button button-primary"
+                               value="<?php _e('Show the list of files to synchronize', 'selupload'); ?>"
+                               onclick="selupload_showfilelist(files_arr,<?php echo strlen(get_option('upload_path')); ?>)"/>
+
+                        <div id="selupload_filelist">
+                            <div align="right"><a class="noun" href="javascript://"
+                                                  onclick="jQuery('#selupload_filelist').slideToggle('slow');"><b>[Закрыть]</b></a>
+                            </div>
+                            <div id="selupload_filelistdiv"></div>
+
+                        </div>
+                        <p class="description"><?php _e('!WARNING! Full synchronization is not designed to synchronize a huge number of files. Firstly, it takes a lot of time, and secondly it will lead to an increase in the load on the server that might cause authorization of the host. With a large number of files is recommended that you synchronize files manually via FTP, and then use this plugin to sync.',
+                                'selupload'); ?></p>
+                    </form>
+
+                </td>
+                <td style="vertical-align: top; text-align: center; padding-top: 10em">
+                    <p style="text-align: justify; text-indent: 3em;"><?php _e(
+                            'You can always help the development of plug-in and contribute to the emergence of new functionality.',
+                            'selupload'
+                        ); ?>
+                    </p>
+
+                    <p style="text-align: justify; text-indent: 3em;"><?php _e(
+                            'If you have any ideas or suggestions',
+                            'selupload'
+                        ); ?>: <a href="mailto:me@wm-talk.net"><?php _e(
+                                'contact the author',
                                 'selupload'
-                            );?> <?php _e('No account? <a href ="http://goo.gl/8Z0q8H">Sign up</a>',
-                                'selupload'); ?></td>
-                    </tr>
-                    <tr>
-                        <td><label for="selupload_username"><b><?php _e(
-                                        'Username',
-                                        'selupload'
-                                    ); ?>:</b></label></td>
-                        <td>
-                            <input id="selupload_username" name="selupload_username" type="text"
-                                   size="15" value="<?php echo esc_attr(
-                                get_option('selupload_username')
-                            ); ?>" class="regular-text code"/>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><label for="selupload_pass"><b><?php _e('Password', 'selupload'); ?>
-                                    :</b></label></td>
-                        <td>
-                            <input id="selupload_pass" name="selupload_pass" type="password"
-                                   size="15"
-                                   value="<?php echo esc_attr(get_option('selupload_pass')); ?>"
-                                   class="regular-text code"/>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><label for="selupload_container"><b><?php _e(
-                                        'Bucket',
-                                        'selupload'
-                                    ); ?>:</b></label></td>
-                        <td>
-                            <input id="selupload_container" name="selupload_container"
-                                   type="text" size="15" value="<?php echo esc_attr(
-                                get_option('selupload_container')
-                            ); ?>" class="regular-text code"/>
-                            <input type="button" name="test" id="submit" class="button button-primary"
-                                   value="<?php _e('Check the connection', 'selupload'); ?>"
-                                   onclick="selupload_testConnet()"/>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><label for="upload_path"><b><?php _e('Local path', 'selupload'); ?>:</b></label></td>
-                        <td>
-                            <input id="upload_path" name="upload_path" type="text" size="15"
-                                   value="<?php echo esc_attr(get_option('upload_path')); ?>"
-                                   class="regular-text code"/>
+                            ); ?></a>.
+                    </p>
 
-                            <p class="description"><?php _e(
-                                    'Local path to the uploaded files. By default',
-                                    'selupload'
-                                ); ?>: <code>wp-content/uploads</code>
-                            </p><?php _e('Setting duplicates of the same name from the mediafiles settings. Changing one, you change and other',
-                                'selupload'); ?>.
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><label for="upload_url_path"><b><?php _e(
-                                        'Full URL-path to files',
-                                        'selupload'
-                                    ); ?>:</b></label></td>
-                        <td>
-                            <input id="upload_url_path" name="upload_url_path" type="text"
-                                   size="15" value="<?php echo esc_attr(
-                                get_option('upload_url_path')
-                            ); ?>" class="regular-text code"/>
+                    <p style="text-align: justify; text-indent: 3em;"><?php _e(
+                            'You can always thank the author of financially.',
+                            'selupload'
+                        ); ?>
+                    </p>
 
-                            <p class="description">
-                                <?php _e(
-                                    'Enter the domain or subdomain if store files only in the Selectel Storage',
-                                    'selupload'
-                                ); ?>
-                                <code>(http://uploads.example.com)</code>, <?php _e(
-                                    'or full url path, if only used synchronization',
-                                    'selupload'
-                                ); ?>
-                                <code>(http://example.com/wp-content/uploads)</code>.</p>
-                            <?php _e('Setting duplicates of the same name from the mediafiles settings. Changing one, you change and other',
-                                'selupload'); ?>.
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><label for="selupload_auth"><b><?php _e(
-                                        'Authorization server',
-                                        'selupload'
-                                    ); ?>:</b></label></td>
-                        <td>
-                            <input id="selupload_auth" name="selupload_auth" type="text"
-                                   size="15"
-                                   value="<?php echo esc_attr(get_option('selupload_auth')); ?>"
-                                   class="regular-text code"/>
+                    <p><strong>PayPal</strong></p>
 
-                            <p class="description"><?php _e('By default', 'selupload'); ?>: <code>auth.selcdn.ru</code>
-                            </p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><label for="selupload_filter"><b><?php _e(
-                                        'Mask files',
-                                        'selupload'
-                                    ); ?>:</b></label></td>
-                        <td>
-                            <input id="selupload_filter" name="selupload_filter" type="text"
-                                   size="15"
-                                   value="<?php echo esc_attr(get_option('selupload_filter')); ?>"
-                                   class="regular-text code"/>
+                    <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+                        <input type="hidden" name="cmd" value="_s-xclick">
+                        <input type="hidden" name="hosted_button_id" value="2PSKHUBC5Z986">
+                        <input type="image" src="<?php echo plugins_url() . '/' . dirname(
+                                plugin_basename(__FILE__)
+                            ); ?>/img/btn_donateCC_LG.gif" border="0" name="submit"
+                               alt="PayPal - The safer, easier way to pay online!">
+                        <img alt="" border="0" src="<?php echo plugins_url() . '/' . dirname(
+                                plugin_basename(__FILE__)
+                            ); ?>/img/pixel.gif" width="1" height="1">
+                    </form>
 
-                            <p class="description"><?php _e('By default', 'selupload'); ?>:
-                                <code>*</code> <?php _e('for all files, 2 or more values separated by a comma (for example: ',
-                                    'selupload'); ?> <code>*.jpg,*.png,n?ame.png</code>)
-                            </p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">
-                            <p><b><?php _e('Synchronization settings', 'selupload'); ?>:</b></p>
-
-                            <p>
-                                <input id="onlystorage" type="checkbox" name="selupload_delafter"
-                                       value="1" <?php checked(get_option('selupload_delafter'), 1); ?> />
-                                <label for="onlystorage"><?php _e(
-                                        'Store files only in the Selectel Storage',
-                                        'selupload'
-                                    ); ?></label>
-                                <code>(<?php _e(
-                                        'to attach a domain / subdomain to store and specify the settings',
-                                        'selupload'
-                                    ); ?>).</code></p>
-
-                            <p class="description"><?php _e('The file will be deleted from the hosting after a successful download. It will only copy in the Selectel Storage',
-                                    'selupload'); ?>.</p>
-
-                            <p>
-                                <input id="selupload_del" type="checkbox" name="selupload_del"
-                                       value="1" <?php checked(
-                                    get_option('selupload_del'),
-                                    1
-                                ); ?> />
-                                <label for="selupload_del"><?php _e(
-                                        'Delete files from the Selectel Storage if they are removed from the library',
-                                        'selupload'
-                                    ); ?>.</label></p>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-                <input type="hidden" name="action" value="update"/>
-                <?php submit_button(); ?>
-            </fieldset>
-        </form>
-        <div id="selupload_progressBar">
-            <div></div>
-        </div>
-        <div id="selupload_synchtext" style="display: none" class="error"></div>
-        <script type="text/javascript" language="JavaScript">
-            <?php
-                $files = selupload_getFilesArr(get_option('upload_path'));
-                echo 'var files_arr = '.json_encode(implode('||',$files)).';'."\n".'var files_count = '.count($files).';'."\n";
-            ?>
-        </script>
-        <form method="post">
-            <input type="button" name="archive" id="submit" class="synch button button-primary"
-                   value="<?php _e('Full synchronization', 'selupload'); ?>"
-                   onclick="selupload_mansynch(files_arr,files_count)"/>
-            <input type="button" name="archive" id="submit" class="synch button button-primary"
-                   value="<?php _e('Show the list of files to synchronize', 'selupload'); ?>"
-                   onclick="selupload_showfilelist(files_arr,<?php echo strlen(get_option('upload_path')); ?>)"/>
-
-            <div id="selupload_filelist">
-                <div align="right"><a class="noun" href="javascript://"
-                                      onclick="jQuery('#selupload_filelist').slideToggle('slow');"><b>[Закрыть]</b></a>
-                </div>
-                <div id="selupload_filelistdiv"></div>
-
-            </div>
-            <p class="description"><?php _e('!WARNING! Full synchronization is not designed to synchronize a huge number of files. Firstly, it takes a lot of time, and secondly it will lead to an increase in the load on the server that might cause authorization of the host. With a large number of files is recommended that you synchronize files manually via FTP, and then use this plugin to sync.',
-                    'selupload'); ?></p>
-        </form>
-
-    </td>
-    <td style="vertical-align: top; text-align: center; padding-top: 10em">
-        <p style="text-align: justify; text-indent: 3em;"><?php _e(
-                'You can always help the development of plug-in and contribute to the emergence of new functionality.',
-                'selupload'
-            ); ?>
-        </p>
-
-        <p style="text-align: justify; text-indent: 3em;"><?php _e(
-                'If you have any ideas or suggestions',
-                'selupload'
-            ); ?>: <a href="mailto:me@wm-talk.net"><?php _e(
-                    'contact the author',
-                    'selupload'
-                ); ?></a>.
-        </p>
-
-        <p style="text-align: justify; text-indent: 3em;"><?php _e(
-                'You can always thank the author of financially.',
-                'selupload'
-            ); ?>
-        </p>
-
-        <p><strong>PayPal</strong></p>
-
-        <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-            <input type="hidden" name="cmd" value="_s-xclick">
-            <input type="hidden" name="hosted_button_id" value="2PSKHUBC5Z986">
-            <input type="image" src="<?php echo plugins_url() . '/' . dirname(
-                    plugin_basename(__FILE__)
-                ); ?>/img/btn_donateCC_LG.gif" border="0" name="submit"
-                   alt="PayPal - The safer, easier way to pay online!">
-            <img alt="" border="0" src="<?php echo plugins_url() . '/' . dirname(
-                    plugin_basename(__FILE__)
-                ); ?>/img/pixel.gif" width="1" height="1">
-        </form>
-
-        <p><strong><?php _e('Yandex.Money', 'selupload'); ?></strong><br/>
-            410011704884638
-            <br/></p>
-        <strong>Webmoney</strong><br/>
-        WMZ - Z149988560659<br/>
-        WMR - R255107795656
-    </td>
-    </tr>
-    </table>
+                    <p><strong><?php _e('Yandex.Money', 'selupload'); ?></strong><br/>
+                        410011704884638
+                        <br/></p>
+                    <strong>Webmoney</strong><br/>
+                    WMZ - Z149988560659<br/>
+                    WMR - R255107795656
+                </td>
+            </tr>
+        </table>
     </div>
 <?php
 }
@@ -586,4 +608,5 @@ function selupload_regsettings()
     register_setting('selupload_settings', 'upload_url_path');
     register_setting('selupload_settings', 'selupload_del');
     register_setting('selupload_settings', 'selupload_filter');
+    register_setting('selupload_settings', 'selupload_notoverewrite');
 }

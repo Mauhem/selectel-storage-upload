@@ -2,9 +2,9 @@
 Contributors: Mauhem
 Donate link: http://wm-talk.net/supload-wordpress-plagin-dlya-zagruzki-na-selectel
 Tags: Uploads, Selectel, CDN, Cloud, Storage, media library, OpenStack, Object storage
-Requires at least: 3.0.1
-Tested up to: 4.1.1
-Stable tag: 1.3.0
+Requires at least: 3.4
+Tested up to: 4.2.1
+Stable tag: 1.3.1
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -43,7 +43,7 @@ In Russian:<br />
 Проблема с чтением файла. Проверьте существует ли файл и права доступа к нему.
 
 * <strong>Invalid response from the authentication service.</strong><br />
-Возмодны два варианта:
+Возможны два варианта:
 1. Хостер блокирует доступ к серверу Selectel (по умолчанию: auth.selcdn.ru, порт 443). Обратитесь к техподдержке хостера.
 2. Проблема на сервере Selectel. Просто подождите, либо сообщите об ошиббке техподдержке.
 
