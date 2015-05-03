@@ -43,3 +43,4 @@ composer.lock
 !.gitignore
 
 logs
+/vendor
