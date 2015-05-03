@@ -95,7 +95,7 @@ function selupload_cloudUpload($postID)
     $file = get_attached_file($postID);
     if (get_option('selupload_debug') == 1) {
         $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
-            array('prefix' => __FUNCTION__ . '_'));
+            array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
         $log->info('Starts unload file');
         $log->info('File path: ' . $file);
     }
@@ -160,7 +160,7 @@ function selupload_thumbUpload($metadata)
     if (isset($metadata['file'])) {
         if (get_option('selupload_debug') == 1) {
             $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
-                array('prefix' => __FUNCTION__ . '_'));
+                array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
         }
         try {
             $connection = new Connection(get_option('selupload_username'), get_option('selupload_pass'),
@@ -302,7 +302,7 @@ function selupload_checkForSync($path)
         $mask = '*';
     if (get_option('selupload_debug') == 1) {
         $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
-            array('prefix' => __FUNCTION__ . '_'));
+            array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
         $log->info('File path: ' . $path);
         $log->info('Short path: ' . selupload_getName($path));
         $log->info('File mask: ' . $mask);
@@ -367,7 +367,7 @@ function selupload_allSynch()
         if (!empty($_POST['files'])) {
             if (get_option('selupload_debug') == 1) {
                 $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
-                    array('prefix' => __FUNCTION__ . '_'));
+                    array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
             }
             $files = selupload_corURI(explode('||', $_POST['files']));
             if (get_option('selupload_debug') == 1 and isset($log)) {
@@ -662,7 +662,7 @@ function selupload_settingsPage()
                                             ); ?> />
                                             <label
                                                 for="selupload_debug"><?php _e('Enable debug mode. Do not operate unless you know what it is.',
-                                                    'selupload'); ?>.</label></p>
+                                                    'selupload'); ?></label></p>
                                     </td>
                                 </tr>
                                 </tbody>
@@ -779,7 +779,7 @@ function selupload_cloudDelete($file)
     try {
         if (get_option('selupload_debug') == 1) {
             $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
-                array('prefix' => __FUNCTION__ . '_'));
+                array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
         }
         $connection = new Connection(get_option('selupload_username'), get_option('selupload_pass'),
             array('authurl' => 'https://' . get_option('selupload_auth') . '/'));
