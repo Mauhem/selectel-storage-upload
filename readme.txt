@@ -12,7 +12,7 @@ This plugin allows you to automatically synchronize media files that are downloa
 
 == Description ==
 This plugin allows you to synchronize files that are uploaded from the media library Wordpress with Selectel Storage (or othet OpenStack Object Storage). Synchronization takes place either in an automatic mode (at upload time) or manually. Supported function to delete files from Selectel Storage when they are removed from the library.
-This plugin allows you to securely store files, and save significant site traffic if you use a domain / subdomain with public bucket.
+This plugin allows you to securely store files, and save significant site traffic if you use a domain / subdomain with public container.
 
 In Russian:<br />
 Этот плагин позволяет синхронизировать файлы, загруженные из медиа-библиотеки Wordpress  в облачное хранилище Selectel (или любой другой OpenStack Object Storage). Синхронизация происходит либо в автоматическом режиме (на этапе загрузки), либо вручную. Поддерживается функция удаления файлов из облачного хранилища Selectel, когда они удаляются из библиотеки.<br />
