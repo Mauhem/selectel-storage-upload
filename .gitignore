@@ -41,5 +41,3 @@ phpunit.xml.dist export-ignore
 composer.lock
 
 !.gitignore
-
-logs
