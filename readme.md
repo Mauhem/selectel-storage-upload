@@ -21,12 +21,14 @@ This plugin allows you to securely store files, and save significant site traffi
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Go to `Settings -> Selectel Upload` and set up the plugin
 
+If the plugin has been downloaded from GitHub, after you must run `composer update` in the directory with the plugin.
 
 #####In Russian:
 1. Загрузить плагин в каталог `/wp-content/plugins/`
 2. Активировать плагин через меню 'Плагины' в WordPress
 3. Перейдите в раздел `Настройки -> Selectel Upload` и настроить плагин
-Если файл был загружен с GitHub, то после необходимо выполнить комманду `composer update` в директории с плагином.
+
+Если плагин был загружен с GitHub, то после необходимо выполнить команду `composer update` в директории с плагином.
 
 ----------
 ## Frequently Asked Questions
