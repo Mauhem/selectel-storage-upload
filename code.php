@@ -51,32 +51,63 @@ function selupload_getName($file)
 function selupload_cloudUpload($postID)
 {
     $file = get_attached_file($postID);
+    if (get_option('selupload_debug') == 1) {
+        $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
+            array('prefix' => 'cloudUpload_'));
+        $log->info('Starts unload file');
+        $log->info('File path: ' . $file);
+    }
     if (selupload_checkForSync($file)) {
         try {
             $connection = new Connection(get_option('selupload_username'), get_option('selupload_pass'),
                 array('authurl' => 'https://' . get_option('selupload_auth') . '/'), 15);
+            if (get_option('selupload_debug') == 1) {
+                ob_start();
+                print_r($connection);
+                $log->debug("Connection dump:\n" . ob_get_contents());
+                ob_end_clean();
+            }
             $container = $connection->getContainer(get_option('selupload_container'));
+            if (get_option('selupload_debug') == 1) {
+                ob_start();
+                print_r($container);
+                $log->debug("Container dump\n" . ob_get_contents());
+                ob_end_clean();
+            }
             if (is_readable($file)) {
-                if (((get_option('selupload_notoverewrite') == true) and ($container->getObject(selupload_getName($file))->getSize() == sizeof($file))) == false) {
+                if (((get_option('selupload_notoverewrite') == 1) and ($container->getObject(selupload_getName($file))->getSize() == sizeof($file))) == false) {
                     $fp = fopen($file, 'r');
                     $object = $container->createObject(selupload_getName($file));
                     $object->write($fp);
                     @fclose($fp);
-                    if (wp_attachment_is_image($postID) == false) {
-                        $object = $container->getObject(selupload_getName($file));
-                        if ((($object instanceof \OpenStackStorage\Object) == true) and (get_option('selupload_delafter') == 1)
-                        ) {
-                            @unlink($file);
-                        }
+                    //if (wp_attachment_is_image($postID) == false) {
+                    $object = $container->getObject(selupload_getName($file));
+                    if (get_option('selupload_debug') == 1) {
+                        $log->info(($object instanceof \OpenStackStorage\Object) ? 'Upload secesfull' : 'File in storage not found');
                     }
+                    if ((($object instanceof \OpenStackStorage\Object) == true) and ((get_option('selupload_delafter') == 1) and ((wp_attachment_is_image($postID) == false)))
+                    ) {
+                        if (get_option('selupload_debug') == 1) {
+                            $log->info('Deleting file: ' . $file);
+                        }
+                        @unlink($file);
+                    }
+                    //}
                 }
             }
 
             return true;
         } catch (Exception $e) {
+            if (get_option('selupload_debug') == 1) {
+                $log->error(($e->getCode() != 0 ? $e->getCode() == 0 . ' :: ' : '') . $e->getMessage());
+            }
             selupload_showMessage(($e->getCode() != 0 ? $e->getCode() == 0 . ' :: ' : '') . $e->getMessage());
         }
     } else {
+        if (get_option('selupload_debug') == 1) {
+            $log->info('Skiped file. Reason: file mask');
+        }
+
         return true;
     }
 
@@ -96,17 +127,17 @@ function selupload_thumbUpload($metadata)
                     $path = $dir . DIRECTORY_SEPARATOR . $thumb['file'];
                     if ((is_readable($path)) and (selupload_checkForSync($path))) {
 
-                        if (((get_option('selupload_notoverewrite') == true) and ($container->getObject(selupload_getName($path))->getSize() == sizeof($path))) == false) {
+                        if (((get_option('selupload_notoverewrite') == 1) and ($container->getObject(selupload_getName($path))->getSize() == sizeof($path))) == false) {
 
-                        $fp = fopen($path, 'r');
-                        $object = $container->createObject(selupload_getName($path));
-                        $object->write($fp);
-                        @fclose($fp);
-                        $object = $container->getObject(selupload_getName($path));
-                        if ((($object instanceof \OpenStackStorage\Object) == true) and (get_option('selupload_delafter') == 1)) {
-                            @unlink($path);
+                            $fp = fopen($path, 'r');
+                            $object = $container->createObject(selupload_getName($path));
+                            $object->write($fp);
+                            @fclose($fp);
+                            $object = $container->getObject(selupload_getName($path));
+                            if ((($object instanceof \OpenStackStorage\Object) == true) and (get_option('selupload_delafter') == 1)) {
+                                @unlink($path);
 
-                        }
+                            }
                         }
                     }
                 }
@@ -139,6 +170,9 @@ function selupload_isDirEmpty($dir)
 
 /**
  * @param string $pattern
+ * @param int $flags = 0
+ *
+ * @return array|false
  */
 function selupload_globRecursive($pattern, $flags = 0)
 {
@@ -167,15 +201,40 @@ function selupload_checkForSync($path)
     get_option('selupload_filter') != '' ?
         $mask = trim(get_option('selupload_filter')) :
         $mask = '*';
+    if (get_option('selupload_debug') == 1) {
+        $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
+            array('prefix' => 'checkForSync_'));
+        $log->info('File path: ' . $path);
+        $log->info('Short path: ' . selupload_getName($path));
+        $log->info('File mask: ' . $mask);
+    }
     $dir = dirname($path);
-    $files = glob($dir . DIRECTORY_SEPARATOR . $mask, GLOB_BRACE);
-
+    if (get_option('selupload_debug') == 1) {
+        $log->info('Directory: ' . $dir);
+    }
+    $files = glob($dir . DIRECTORY_SEPARATOR . '{' . $mask . '}', GLOB_BRACE);
+    if (get_option('selupload_debug') == 1) {
+        ob_start();
+        print_r($files);
+        $log->debug("Files dump (full name):\n" . ob_get_contents());
+        ob_end_clean();
+    }
     $count = count($files) - 1;
     for ($i = 0; $i <= $count; $i++) {
         $files[$i] = selupload_getName($files[$i]);
     }
+    if (get_option('selupload_debug') == 1) {
+        ob_start();
+        print_r($files);
+        $log->debug("Files dump (short name):\n" . ob_get_contents());
+        ob_end_clean();
+    }
+    $result = in_array(selupload_getName($path), $files);
+    if (get_option('selupload_debug') == 1) {
+        $result ? $log->info('Path found in files') : $log->info('Path not found in files');
+    }
 
-    return in_array(selupload_getName($path), $files);
+    return $result;
 
 }
 
@@ -461,6 +520,17 @@ function selupload_settingsPage()
                                             <label
                                                 for="selupload_notoverewrite"><?php _e('Do not overwrite the file if it already exists in the storage',
                                                     'selupload'); ?>.</label></p>
+
+                                        <p>
+                                            <input id="selupload_debug" type="checkbox"
+                                                   name="selupload_debug"
+                                                   value="1" <?php checked(
+                                                get_option('selupload_debug'),
+                                                1
+                                            ); ?> />
+                                            <label
+                                                for="selupload_debug"><?php _e('Enable debug mode. Do not operate unless you know what it is.',
+                                                    'selupload'); ?>.</label></p>
                                     </td>
                                 </tr>
                                 </tbody>
@@ -609,4 +679,5 @@ function selupload_regsettings()
     register_setting('selupload_settings', 'selupload_del');
     register_setting('selupload_settings', 'selupload_filter');
     register_setting('selupload_settings', 'selupload_notoverewrite');
+    register_setting('selupload_settings', 'selupload_debug');
 }
