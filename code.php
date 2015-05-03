@@ -4,6 +4,14 @@ require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPA
 
 use OpenStackStorage\Connection;
 
+/**
+ * Displays formatted message
+ *
+ * @param string $message Message string
+ * @param bool $errormsg = false If the error message, then be true
+ *
+ * @return string
+ */
 function selupload_showMessage($message, $errormsg = false)
 {
     if ($errormsg) {
@@ -15,6 +23,9 @@ function selupload_showMessage($message, $errormsg = false)
     echo "<p><strong>$message</strong></p></div>";
 }
 
+/**
+ * Tests the connection to the server. Returns the response html. Ajax funtion.
+ */
 function selupload_testConnet()
 {
     try {
@@ -37,6 +48,13 @@ function selupload_testConnet()
 
 add_action('wp_ajax_selupload_testConnet', 'selupload_testConnet');
 
+/**
+ * It cuts a path relative to the uploads directory
+ *
+ * @param string $file Full url path. Example /var/www/example.com/wm-content/uploads/2015/05/simple.jpg
+ *
+ * @return string Short path. Example 2015/05/simple.jpg
+ */
 function selupload_getName($file)
 {
     $dir = get_option('upload_path');
@@ -48,6 +66,13 @@ function selupload_getName($file)
     return $file;
 }
 
+/**
+ * Upload files to the repository
+ *
+ * @param int $postID Id upload file
+ *
+ * @return bool
+ */
 function selupload_cloudUpload($postID)
 {
     $file = get_attached_file($postID);
@@ -113,7 +138,11 @@ function selupload_cloudUpload($postID)
 
     return false;
 }
-
+/*
+ * Based on $metadata uploads thumbnails in cloud storage
+ * @param array $metadata
+ * @return array It returns the $metadata array does not change for further processing
+ */
 function selupload_thumbUpload($metadata)
 {
     if (isset($metadata['file'])) {
@@ -159,6 +188,11 @@ function selupload_thumbUpload($metadata)
     return $metadata;
 }
 
+/**
+ * Checks directory for the presence of files. If files are missing returns true, otherwise null.
+ * @param $dir
+ * @return bool|null
+ */
 function selupload_isDirEmpty($dir)
 {
     if (!is_readable($dir)) {
@@ -184,6 +218,11 @@ function selupload_globRecursive($pattern, $flags = 0)
     return $files;
 }
 
+/**
+ * Returns an array list of files in a directory $dir
+ * @param string $dir
+ * @return array
+ */
 function selupload_getFilesArr($dir)
 {
     get_option('selupload_filter') != '' ?
@@ -196,6 +235,26 @@ function selupload_getFilesArr($dir)
         'is_file');
 }
 
+/**
+ * Faster search in an array with a large number of files
+ * @param mixed $needle
+ * @param array $haystack
+ * @return bool
+ */
+function selupload_inArray($needle,$haystack){
+    $flipped_haystack = array_flip($haystack);
+    if ( isset($flipped_haystack[$needle]) )
+    {
+        return true;
+    }
+    return false;
+}
+
+/*
+ * Checks if the file falls under the mask specified in the settings.
+ * @param string @path Full path to file
+ * @return bool
+ */
 function selupload_checkForSync($path)
 {
     get_option('selupload_filter') != '' ?
@@ -229,7 +288,8 @@ function selupload_checkForSync($path)
         $log->debug("Files dump (short name):\n" . ob_get_contents());
         ob_end_clean();
     }
-    $result = in_array(selupload_getName($path), $files);
+    //$result = in_array(selupload_getName($path), $files,true);
+    $result = selupload_inArray(selupload_getName($path), $files);
     if (get_option('selupload_debug') == 1) {
         $result ? $log->info('Path found in files') : $log->info('Path not found in files');
     }
@@ -237,7 +297,10 @@ function selupload_checkForSync($path)
     return $result;
 
 }
-
+/* Removes escaping characters in path or array of paths
+ * @param string|array $path
+ * @return string|array
+ */
 function selupload_corURI($path)
 {
     if (is_array($path)) {
@@ -254,6 +317,9 @@ function selupload_corURI($path)
     return $path;
 }
 
+/**
+ * Function manual synch
+ */
 function selupload_allSynch()
 {
     try {
@@ -330,6 +396,9 @@ function selupload_allSynch()
 
 add_action('wp_ajax_selupload_allsynch', 'selupload_allSynch');
 
+/*
+ * Create a page settings
+ */
 function selupload_settingsPage()
 {
     ?>
@@ -617,7 +686,9 @@ function selupload_settingsPage()
     </div>
 <?php
 }
-
+/*
+ * The function creates the admin menu
+ */
 function selupload_createMenu()
 {
     add_options_page(
@@ -630,8 +701,15 @@ function selupload_createMenu()
     add_action('admin_init', 'selupload_regsettings');
 }
 
+/*
+ * Add admin menu
+ */
 add_action('admin_menu', 'selupload_createMenu');
-
+/*
+ * Deletes the file from the clouds before removing from the server
+ * @param string $file Full path ro file
+ * @return string
+ */
 function selupload_cloudDelete($file)
 {
     try {
@@ -639,6 +717,7 @@ function selupload_cloudDelete($file)
             array('authurl' => 'https://' . get_option('selupload_auth') . '/'));
         $container = $connection->getContainer(get_option('selupload_container'));
         $container->deleteObject(selupload_getName($file));
+        // TODO: Проверить нужно ли обрезать имя
         @unlink(get_option('upload_path') . DIRECTORY_SEPARATOR . selupload_getName($file));
 
         return $file;
@@ -652,21 +731,41 @@ if (get_option('selupload_del') == 1) {
     add_filter('wp_delete_file', 'selupload_cloudDelete', 10, 1);
 }
 
+/*
+ * Function registration js files
+ */
 function selupload_scripts()
 {
-    wp_enqueue_script('selupload_js', plugins_url('/js/script.js', __FILE__), array('jquery'), '1.2.4', true);
+    wp_enqueue_script('selupload_js', plugins_url('/js/script.js', __FILE__), array('jquery'), '1.4.0', true);
 }
-
+/*
+ * Function registration css files
+ */
 function selupload_stylesheetToAdmin()
 {
     wp_enqueue_style('selupload-progress', plugins_url('css/admin.css', __FILE__));
 }
 
+/*
+ * Add filter to thumbnail
+ */
 add_filter('wp_generate_attachment_metadata', 'selupload_thumbUpload', 10, 1);
+/*
+ * Add filter to attachment
+ */
 add_action('add_attachment', 'selupload_cloudUpload', 10, 1);
+/*
+ * Registration css files
+ */
 add_action('admin_enqueue_scripts', 'selupload_stylesheetToAdmin');
+/*
+ * Registration js files
+ */
 add_action('admin_enqueue_scripts', 'selupload_scripts');
 
+/*
+ * Registration settings
+ */
 function selupload_regsettings()
 {
     register_setting('selupload_settings', 'selupload_auth');

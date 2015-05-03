@@ -5,8 +5,8 @@ Tags: Uploads, Selectel, CDN, Cloud, Storage, media library, OpenStack, Object s
 Requires at least: 3.4
 Tested up to: 4.2.1
 Stable tag: 1.3.1
-License: GPLv2
-License URI: http://www.gnu.org/licenses/gpl-2.0.html
+License: GPLv3
+License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
 This plugin allows you to automatically synchronize media files that are downloaded to the articles or just the library, to Selectel Storage.
 
