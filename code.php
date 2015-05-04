@@ -126,7 +126,7 @@ function selupload_cloudUpload($postID)
                         if (get_option('selupload_debug') == 1 and isset($log)) {
                             $log->info('Deleting file: ' . $file);
                         }
-                        @unlink($file);
+                        unlink($file);
                     }
                     //}
                 }
@@ -157,11 +157,12 @@ function selupload_cloudUpload($postID)
  */
 function selupload_thumbUpload($metadata)
 {
+    if (get_option('selupload_debug') == 1) {
+        $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
+            array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
+            $log->debug("Metadata dump:\n" . selupload_dump($metadata));
+    }
     if (isset($metadata['file'])) {
-        if (get_option('selupload_debug') == 1) {
-            $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
-                array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
-        }
         try {
             $connection = new Connection(get_option('selupload_username'), get_option('selupload_pass'),
                 array('authurl' => 'https://' . get_option('selupload_auth') . '/'), 15);
@@ -173,13 +174,13 @@ function selupload_thumbUpload($metadata)
                 $log->debug("Container dump:\n" . selupload_dump($container));
             }
             if ($container instanceof \OpenStackStorage\Container) {
-                $dir = get_option('upload_path') . DIRECTORY_SEPARATOR . dirname($metadata['file']);
+                $upload_dir = wp_upload_dir();
                 if (get_option('selupload_debug') == 1 and isset($log)) {
                     $log->info("Metadata file: " . $metadata['file']);
                 }
                 foreach ($metadata['sizes'] as $thumb) {
                     if (isset($thumb['file'])) {
-                        $path = $dir . DIRECTORY_SEPARATOR . $thumb['file'];
+                        $path = $upload_dir['path'] . DIRECTORY_SEPARATOR . $thumb['file'];
                         if (get_option('selupload_debug') == 1 and isset($log)) {
                             $log->info("Path to thumbnail: " . $path);
                         }
@@ -203,18 +204,23 @@ function selupload_thumbUpload($metadata)
                                     if (get_option('selupload_debug') == 1 and isset($log)) {
                                         $log->info("File " . $path . ' deleted');
                                     }
-                                    @unlink($path);
+                                    unlink($path);
 
                                 }
                             }
                         }
                     }
                 }
-
-                $object = $container->getObject(selupload_getName($metadata['file']));
+                if (get_option('selupload_debug') == 1 and isset($log)) {
+                    $log->info("Original file " . $upload_dir['basedir'] . DIRECTORY_SEPARATOR . $metadata['file'] . " getName - ".selupload_getName($upload_dir['basedir'] . DIRECTORY_SEPARATOR.$metadata['file']));
+                }
+                $object = $container->getObject(selupload_getName($upload_dir['basedir'] . DIRECTORY_SEPARATOR.$metadata['file']));
                 if ((($object instanceof \OpenStackStorage\Object) == true) and (get_option('selupload_delafter') == 1)
                 ) {
-                    @unlink(get_option('upload_path') . DIRECTORY_SEPARATOR . $metadata['file']);
+                    if (get_option('selupload_debug') == 1 and isset($log)) {
+                        $log->info("File " . $upload_dir['basedir'] . DIRECTORY_SEPARATOR . $metadata['file'] . ' deleted');
+                    }
+                    unlink($upload_dir['basedir'] . DIRECTORY_SEPARATOR . $metadata['file']);
                 }
             }
             return $metadata;
@@ -276,7 +282,7 @@ function selupload_getFilesArr($dir)
 
 /**
  * Faster search in an array with a large number of files
- * @param mixed $needle
+ * @param string $needle
  * @param array $haystack
  * @return bool
  */
@@ -313,20 +319,14 @@ function selupload_checkForSync($path)
     }
     $files = glob($dir . DIRECTORY_SEPARATOR . '{' . $mask . '}', GLOB_BRACE);
     if (get_option('selupload_debug') == 1 and isset($log)) {
-        ob_start();
-        print_r($files);
-        $log->debug("Files dump (full name):\n" . ob_get_contents());
-        ob_end_clean();
+        $log->debug("Files dump (full name):\n" . selupload_dump($files));
     }
     $count = count($files) - 1;
     for ($i = 0; $i <= $count; $i++) {
         $files[$i] = selupload_getName($files[$i]);
     }
     if (get_option('selupload_debug') == 1 and isset($log)) {
-        ob_start();
-        print_r($files);
-        $log->debug("Files dump (short name):\n" . ob_get_contents());
-        ob_end_clean();
+        $log->debug("Files dump (full name):\n" . selupload_dump($files));
     }
     //$result = in_array(selupload_getName($path), $files,true);
     $result = selupload_inArray(selupload_getName($path), $files);
@@ -393,7 +393,7 @@ function selupload_allSynch()
                     $fp = fopen($thisfile, 'r');
                     $object = $container->createObject($filename);
                     $object->write($fp);
-                    @fclose($fp);
+                    fclose($fp);
                     $object = $container->getObject($filename);
                     if (get_option('selupload_debug') == 1 and isset($log)) {
                         if($object instanceof \OpenStackStorage\Object) {
@@ -406,7 +406,7 @@ function selupload_allSynch()
                         if (get_option('selupload_debug') == 1 and isset($log)) {
                                 $log->info("File " . $filename . ' deleted');
                         }
-                        @unlink($thisfile);
+                        unlink($thisfile);
                     } elseif (($object instanceof \OpenStackStorage\Object) !== true) {
                         $error = __('Impossible to upload a file',
                                 'selupload') . ': ' . $thisfile;
@@ -791,7 +791,7 @@ function selupload_cloudDelete($file)
             $log->debug("Container dump\n" . selupload_dump($container));
         }
         $container->deleteObject(selupload_getName($file));
-        @unlink($file);
+        unlink($file);
         if (get_option('selupload_debug') == 1 and isset($log)) {
             $log->info("Delete file:\n" . $file);
         }
