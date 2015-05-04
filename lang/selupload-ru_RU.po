@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Selectel Storage Upload v1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-05-03 03:25+0300\n"
-"PO-Revision-Date: 2015-05-03 03:25+0300\n"
+"POT-Creation-Date: 2015-05-04 20:45+0300\n"
+"PO-Revision-Date: 2015-05-04 21:08+0300\n"
 "Last-Translator: Mauhem <me@wm-talk.net>\n"
 "Language-Team: Mauhem <me@wm-talk.net>\n"
 "Language: ru_RU\n"
@@ -21,75 +21,75 @@ msgstr ""
 "X-Poedit-SearchPath-0: .\n"
 
 # @ supload
-#: code.php:28
+#: code.php:39
 msgid "Connection is successfully established. Save the settings."
 msgstr "Соединение успешно установлено. Сохраните настройки."
 
 # @ supload
-#: code.php:32
+#: code.php:43
 msgid "Connection is not established."
 msgstr "Не удалось подключиться к контейнеру."
 
-#: code.php:244 code.php:281
+#: code.php:411 code.php:448
 msgid "Impossible to upload a file"
 msgstr "Невозможно загрузить файл"
 
-#: code.php:248
+#: code.php:415
 msgid "Do not have access to the file"
 msgstr "Файл не существует или недоступен для чтения"
 
-#: code.php:260
+#: code.php:427
 msgid "Unable to connect to the container"
 msgstr "Не удается подключиться к контейнеру"
 
-#: code.php:270
+#: code.php:437
 msgid "Data empty"
 msgstr "Данные пустые"
 
 # @ supload
-#: code.php:308
+#: code.php:478
 msgid "Settings"
 msgstr "Настройки"
 
 # @ supload
-#: code.php:329
+#: code.php:499
 msgid "Type the information for access to your container."
 msgstr "Введите информацию для доступа к вашему контейнеру."
 
-#: code.php:331
+#: code.php:501
 msgid "No account? <a href =\"http://goo.gl/8Z0q8H\">Sign up</a>"
 msgstr "Нет аккаунта? <a href =\"http://goo.gl/8Z0q8H\">Зарегистрироваться</a>"
 
 # @ supload
-#: code.php:336
+#: code.php:506
 msgid "Username"
 msgstr "Имя пользователя"
 
 # @ supload
-#: code.php:347
+#: code.php:517
 msgid "Password"
 msgstr "Пароль"
 
-#: code.php:358
+#: code.php:528
 msgid "Container"
 msgstr "Контейнер"
 
 # @ supload
-#: code.php:367
+#: code.php:537
 msgid "Check the connection"
 msgstr "Проверить соединение"
 
 # @ supload
-#: code.php:372
+#: code.php:542
 msgid "Local path"
 msgstr "Локальный путь"
 
 # @ supload
-#: code.php:381
+#: code.php:551
 msgid "Local path to the uploaded files. By default"
 msgstr "Локальный путь к загружаемым файлам. По умолчанию"
 
-#: code.php:384 code.php:409
+#: code.php:554 code.php:579
 msgid ""
 "Setting duplicates of the same name from the mediafiles settings. Changing "
 "one, you change and other"
@@ -98,58 +98,58 @@ msgstr ""
 "изменяете и другую. "
 
 # @ supload
-#: code.php:390
+#: code.php:560
 msgid "Full URL-path to files"
 msgstr "Полный URL-путь к файлам"
 
 # @ supload
-#: code.php:401
+#: code.php:571
 msgid ""
 "Enter the domain or subdomain if store files only in the Selectel Storage"
 msgstr ""
 "Введите адрес домена/поддомена, если файлы хранятся только в Selectel Storage"
 
 # @ supload
-#: code.php:405
+#: code.php:575
 msgid "or full url path, if only used synchronization"
 msgstr "или полный Url адрес, если используется только синхронизация"
 
 # @ supload
-#: code.php:415
+#: code.php:585
 msgid "Authorization server"
-msgstr "Сервер Аторизации"
+msgstr "Сервер авторизации"
 
 # @ supload
-#: code.php:424 code.php:439
+#: code.php:594 code.php:609
 msgid "By default"
 msgstr "По умолчанию"
 
-#: code.php:430
+#: code.php:600
 msgid "Mask files"
 msgstr "Маска файлов"
 
-#: code.php:440
+#: code.php:610
 msgid "for all files, 2 or more values separated by a comma (for example: "
 msgstr "для всех файлов, 2 и более значения разделяются запятой (например:"
 
 # @ supload
-#: code.php:447
+#: code.php:617
 msgid "Synchronization settings"
 msgstr "Настройки синхронизации"
 
 # @ supload
-#: code.php:453
+#: code.php:623
 msgid "Store files only in the Selectel Storage"
 msgstr "Хранить файлы только в Selectel Storage"
 
 # @ supload
-#: code.php:457
+#: code.php:627
 msgid "to attach a domain / subdomain to store and specify the settings"
 msgstr ""
 "чтобы не было \"битых\" ссылок необходимо прикрепить домен / поддомен к "
 "контейнеру в Selectel Storage и указать его в настройках"
 
-#: code.php:461
+#: code.php:631
 msgid ""
 "The file will be deleted from the hosting after a successful download. It "
 "will only copy in the Selectel Storage"
@@ -158,29 +158,29 @@ msgstr ""
 "только в Selectel Storage"
 
 # @ supload
-#: code.php:471
+#: code.php:641
 msgid ""
 "Delete files from the Selectel Storage if they are removed from the library"
 msgstr "Удалять файлы из Selectel Storage, если они были удалены из библиотеки"
 
-#: code.php:483
+#: code.php:653
 msgid "Do not overwrite the file if it already exists in the storage"
 msgstr "Не перезаписывать файл, если он уже есть в хранилище"
 
-#: code.php:494
-msgid "Enable debug mode. Do not operate unless you know what it is."
+#: code.php:664
+msgid "Enable debug mode. Do not enable unless you know what it is."
 msgstr "Включить режим отладки. Не включайте, если не знаете зачем это."
 
 # @ supload
-#: code.php:516
+#: code.php:686
 msgid "Full synchronization"
 msgstr "Полная синхронизация"
 
-#: code.php:519
+#: code.php:689
 msgid "Show the list of files to synchronize"
 msgstr "Файлы для синхронизации"
 
-#: code.php:529
+#: code.php:699
 msgid ""
 "!WARNING! Full synchronization is not designed to synchronize a huge number "
 "of files. Firstly, it takes a lot of time, and secondly it will lead to an "
@@ -196,7 +196,7 @@ msgstr ""
 "плагин для синхронизации в автоматическом режиме вновь добавляемых файлов."
 
 # @ supload
-#: code.php:536
+#: code.php:706
 msgid ""
 "You can always help the development of plug-in and contribute to the "
 "emergence of new functionality."
@@ -205,22 +205,22 @@ msgstr ""
 "функциональности."
 
 # @ supload
-#: code.php:542
+#: code.php:712
 msgid "If you have any ideas or suggestions"
 msgstr "Если у вас есть идеи или предложения"
 
 # @ supload
-#: code.php:545
+#: code.php:715
 msgid "contact the author"
 msgstr "связаться с автором"
 
 # @ supload
-#: code.php:551
+#: code.php:721
 msgid "You can always thank the author of financially."
 msgstr "Вы всегда можете поблагодарить автора материально."
 
 # @ supload
-#: code.php:570
+#: code.php:740
 msgid "Yandex.Money"
 msgstr "Яндекс.Деньги"
 

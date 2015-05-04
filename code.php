@@ -661,7 +661,7 @@ function selupload_settingsPage()
                                                 1
                                             ); ?> />
                                             <label
-                                                for="selupload_debug"><?php _e('Enable debug mode. Do not operate unless you know what it is.',
+                                                for="selupload_debug"><?php _e('Enable debug mode. Do not enable unless you know what it is.',
                                                     'selupload'); ?></label></p>
                                     </td>
                                 </tr>
