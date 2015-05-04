@@ -183,6 +183,11 @@ function selupload_thumbUpload($metadata)
                         $path = $upload_dir['path'] . DIRECTORY_SEPARATOR . $thumb['file'];
                         if (get_option('selupload_debug') == 1 and isset($log)) {
                             $log->info("Path to thumbnail: " . $path);
+                            if (selupload_checkForSync($path)){
+                                $log->info('File ' . $path. ' will be uploaded.');
+                            }else{
+                                $log->info('File ' . $path. ' does not fit the mask.');
+                            }
                         }
                         if ((is_readable($path)) and (selupload_checkForSync($path))) {
 
@@ -677,7 +682,8 @@ function selupload_settingsPage()
                     <div id="selupload_synchtext" style="display: none" class="error"></div>
                     <script type="text/javascript" language="JavaScript">
                         <?php
-                            $files = selupload_getFilesArr(get_option('upload_path'));
+                            $upload_dir = wp_upload_dir();
+                            $files = selupload_getFilesArr($upload_dir['basedir']);
                             echo 'var files_arr = '.json_encode(implode('||',$files)).';'."\n".'var files_count = '.count($files).';'."\n";
                         ?>
                     </script>
@@ -687,7 +693,7 @@ function selupload_settingsPage()
                                onclick="selupload_mansynch(files_arr,files_count)"/>
                         <input type="button" name="archive" id="submit" class="synch button button-primary"
                                value="<?php _e('Show the list of files to synchronize', 'selupload'); ?>"
-                               onclick="selupload_showfilelist(files_arr,<?php echo strlen(get_option('upload_path')); ?>)"/>
+                               onclick="selupload_showfilelist(files_arr,<?php echo strlen($upload_dir['basedir']); ?>)"/>
 
                         <div id="selupload_filelist">
                             <div align="right"><a class="noun" href="javascript://"
