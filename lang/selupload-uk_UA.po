@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Selectel Storage Upload\n"
-"POT-Creation-Date: 2015-05-04 21:28+0300\n"
-"PO-Revision-Date: 2015-05-04 21:28+0300\n"
+"POT-Creation-Date: 2015-05-20 19:49+0300\n"
+"PO-Revision-Date: 2015-05-20 19:51+0300\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: uk_UA\n"
@@ -27,60 +27,60 @@ msgstr "Підключення успішно встановлено. Збере
 msgid "Connection is not established."
 msgstr "З'єднання не встановлено."
 
-#: code.php:416 code.php:453
+#: code.php:445 code.php:482
 msgid "Impossible to upload a file"
 msgstr "Неможливо завантажити файл"
 
-#: code.php:420
+#: code.php:449
 msgid "Do not have access to the file"
 msgstr "У вас немає доступу до файлу"
 
-#: code.php:432
+#: code.php:461
 msgid "Unable to connect to the container"
 msgstr "Не вдається підключитися до контейнеру"
 
-#: code.php:442
+#: code.php:471
 msgid "Data empty"
 msgstr "Дані порожні"
 
-#: code.php:483
+#: code.php:512
 msgid "Settings"
 msgstr "Налаштування"
 
-#: code.php:504
+#: code.php:533
 msgid "Type the information for access to your container."
 msgstr "Введіть інформацію для доступу до контейнера."
 
-#: code.php:506
+#: code.php:535
 msgid "No account? <a href =\"http://goo.gl/8Z0q8H\">Sign up</a>"
 msgstr ""
 "Ви не зареєстровані? <a href =\"http://goo.gl/8Z0q8H\"> Зареєструватися </a>"
 
-#: code.php:511
+#: code.php:540
 msgid "Username"
 msgstr "Логін"
 
-#: code.php:522
+#: code.php:551
 msgid "Password"
 msgstr "Пароль"
 
-#: code.php:533
+#: code.php:562
 msgid "Container"
 msgstr "Контейнер"
 
-#: code.php:542
+#: code.php:571
 msgid "Check the connection"
 msgstr "Перевірити підключення"
 
-#: code.php:547
+#: code.php:576
 msgid "Local path"
 msgstr "Локальний шлях"
 
-#: code.php:556
+#: code.php:585
 msgid "Local path to the uploaded files. By default"
 msgstr "Локальний шлях до завантажених файлів. За замовчуванням"
 
-#: code.php:559 code.php:584
+#: code.php:588 code.php:613
 msgid ""
 "Setting duplicates of the same name from the mediafiles settings. Changing "
 "one, you change and other"
@@ -88,52 +88,52 @@ msgstr ""
 "Налаштування дублює однойменну настройку в медіафайлах. Змінюючи одну, ви "
 "змінюєте й іншу."
 
-#: code.php:565
+#: code.php:594
 msgid "Full URL-path to files"
 msgstr "Повна адреса до файлів"
 
-#: code.php:576
+#: code.php:605
 msgid ""
 "Enter the domain or subdomain if store files only in the Selectel Storage"
 msgstr ""
 "Введіть адресу домену / піддомена, якщо файли зберігаються тільки в Selectel "
 "Storage"
 
-#: code.php:580
+#: code.php:609
 msgid "or full url path, if only used synchronization"
 msgstr "або повний Url адресу, якщо використовується тільки синхронізація"
 
-#: code.php:590
+#: code.php:619
 msgid "Authorization server"
 msgstr "Сервер авторизації"
 
-#: code.php:599 code.php:614
+#: code.php:628 code.php:643
 msgid "By default"
 msgstr "За замовчуванням"
 
-#: code.php:605
+#: code.php:634
 msgid "Mask files"
 msgstr "Маска файлів"
 
-#: code.php:615
+#: code.php:644
 msgid "for all files, 2 or more values separated by a comma (for example: "
 msgstr "для всіх файлів, 2 і більше значення розділяються комою (наприклад:"
 
-#: code.php:622
+#: code.php:651
 msgid "Synchronization settings"
 msgstr "Налаштування синхронізації"
 
-#: code.php:628
+#: code.php:657
 msgid "Store files only in the Selectel Storage"
 msgstr "Зберігати файли тільки в Selectel Storage"
 
-#: code.php:632
+#: code.php:661
 msgid "to attach a domain / subdomain to store and specify the settings"
 msgstr ""
 "щоб не було \"битих\" посилань необхідно прикріпити домен / піддомен до "
 "контейнера в Selectel Storage і вказати його в налаштуваннях"
 
-#: code.php:636
+#: code.php:665
 msgid ""
 "The file will be deleted from the hosting after a successful download. It "
 "will only copy in the Selectel Storage"
@@ -141,29 +141,41 @@ msgstr ""
 "Файл буде видалений на хостингу після успішного завантаження. Його копія "
 "залишиться тільки в Selectel Storage"
 
-#: code.php:646
+#: code.php:675
 msgid ""
 "Delete files from the Selectel Storage if they are removed from the library"
 msgstr ""
 "Видаляти файли з Selectel Storage, якщо вони були видалені з бібліотеки"
 
-#: code.php:658
+#: code.php:685
+msgid "Deferred upload files"
+msgstr "Відкладене вивантаження файлів."
+
+#: code.php:688
+msgid ""
+"Files are uploaded to the delay. It protects against errors when uploading "
+"large files."
+msgstr ""
+"Файли вивантажуються із затримкою. Захищає від помилок при вивантаженні "
+"великих файлів."
+
+#: code.php:699
 msgid "Do not overwrite the file if it already exists in the storage"
 msgstr "Чи не перезаписувати файл, якщо він вже є в сховищі"
 
-#: code.php:669
+#: code.php:710
 msgid "Enable debug mode. Do not enable unless you know what it is."
 msgstr "Включити режим налагодження. Не вмикайте, якщо не знаєте навіщо це."
 
-#: code.php:691
+#: code.php:733
 msgid "Full synchronization"
 msgstr "Повна синхронізація"
 
-#: code.php:694
+#: code.php:736
 msgid "Show the list of files to synchronize"
 msgstr "Файли для синхронізації"
 
-#: code.php:704
+#: code.php:746
 msgid ""
 "!WARNING! Full synchronization is not designed to synchronize a huge number "
 "of files. Firstly, it takes a lot of time, and secondly it will lead to an "
@@ -178,7 +190,7 @@ msgstr ""
 "синхронізувати файли через FTP вручну, а потім вже використовувати цей "
 "плагін для синхронізації в автоматичному режимі знову додаються файлів."
 
-#: code.php:711
+#: code.php:753
 msgid ""
 "You can always help the development of plug-in and contribute to the "
 "emergence of new functionality."
@@ -186,19 +198,19 @@ msgstr ""
 "Ви завжди можете допомогти розвитку плагіна і сприяти появі нової "
 "функціональності"
 
-#: code.php:717
+#: code.php:759
 msgid "If you have any ideas or suggestions"
 msgstr "Якщо у вас є ідеї або пропозиції"
 
-#: code.php:720
+#: code.php:762
 msgid "contact the author"
 msgstr "зв'язатись із автором"
 
-#: code.php:726
+#: code.php:768
 msgid "You can always thank the author of financially."
 msgstr "Ви завжди можете подякувати автора матеріально"
 
-#: code.php:745
+#: code.php:787
 msgid "Yandex.Money"
 msgstr "Yandex.Money"
 

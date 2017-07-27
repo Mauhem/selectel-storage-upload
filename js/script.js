@@ -3,6 +3,13 @@ var selupload_synchtext = jQuery('#selupload_synchtext');
 var selupload_message = jQuery('#selupload_message');
 var selupload_filelist = jQuery('#selupload_filelist');
 var selupload_filelistdiv = jQuery('#selupload_filelistdiv');
+var selupload_path_in_storage_code = jQuery('#selupload_path_in_storage_code');
+var selupload_path_in_storage = jQuery('#selupload_path_in_storage');
+selupload_path_in_storage.keyup(function(){
+    var selupload_path_in_storage_value = selupload_path_in_storage.val();
+    selupload_path_in_storage_code.empty();
+    selupload_path_in_storage_code.text(selupload_path_in_storage_value+selupload_first_file);
+});
 function selupload_progress(percent, $element) {
     selupload_prbar.show(0);
     var progressBarWidth = percent * $element.width() / 100;

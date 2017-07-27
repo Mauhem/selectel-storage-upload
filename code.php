@@ -10,7 +10,6 @@ use OpenStackStorage\Connection;
  * @param string $message Message string
  * @param bool $errormsg = false If the error message, then be true
  *
- * @return string
  */
 function selupload_showMessage($message, $errormsg = false)
 {
@@ -59,9 +58,11 @@ function selupload_getName($file)
 {
     $dir = get_option('upload_path');
     $file = str_replace($dir, '', $file);
+    $file = get_option('selupload_path_in_storage') . $file;
     $file = str_replace('\\', '/', $file);
+    $file = str_replace('//', '/', $file);
     $file = str_replace(' ', '%20', $file);
-    $file = ltrim($file, '/');
+    //$file = ltrim($file, '/');
 
     return $file;
 }
@@ -92,78 +93,54 @@ function selupload_dump($data)
  */
 function selupload_cloudUpload($postID)
 {
-    $file = get_attached_file($postID);
-    if (get_option('selupload_debug') == 1) {
-        $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
-            array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
-        $log->info('Starts unload file');
-        $log->info('File path: ' . $file);
-    }
-    if (selupload_checkForSync($file)) {
-        try {
-            $connection = new Connection(get_option('selupload_username'), get_option('selupload_pass'),
-                array('authurl' => 'https://' . get_option('selupload_auth') . '/'), 15);
-            if (get_option('selupload_debug') == 1 and isset($log)) {
-                $log->debug("Connection dump:\n" . selupload_dump($connection));
-            }
-            $container = $connection->getContainer(get_option('selupload_container'));
-            if (get_option('selupload_debug') == 1 and isset($log)) {
-                $log->debug("Container dump\n" . selupload_dump($container));
-            }
-            if (is_readable($file) and ($container instanceof \OpenStackStorage\Container)) {
-                if (((get_option('selupload_notoverewrite') == 1) and ($container->getObject(selupload_getName($file))->getSize() == sizeof($file))) == false) {
-                    $fp = fopen($file, 'r');
-                    $object = $container->createObject(selupload_getName($file));
-                    $object->write($fp);
-                    @fclose($fp);
-                    //if (wp_attachment_is_image($postID) == false) {
-                    $object = $container->getObject(selupload_getName($file));
-                    if (get_option('selupload_debug') == 1 and isset($log)) {
-                        $log->info(($object instanceof \OpenStackStorage\Object) ? 'Successfully uploaded' : 'File in storage not found');
-                    }
-                    if ((($object instanceof \OpenStackStorage\Object) == true) and ((get_option('selupload_delafter') == 1) and ((wp_attachment_is_image($postID) == false)))
-                    ) {
-                        if (get_option('selupload_debug') == 1 and isset($log)) {
-                            $log->info('Deleting file: ' . $file);
-                        }
-                        unlink($file);
-                    }
-                    //}
-                }
-            }
-
-            return true;
-        } catch (Exception $e) {
-            if (get_option('selupload_debug') == 1 and isset($log)) {
-                $log->error(($e->getCode() != 0 ? $e->getCode() == 0 . ' :: ' : '') . $e->getMessage());
-            }
-            selupload_showMessage(($e->getCode() != 0 ? $e->getCode() == 0 . ' :: ' : '') . $e->getMessage());
-        }
-    } else {
-        if (get_option('selupload_debug') == 1 and isset($log)) {
-            $log->info('Skiped file. Reason: file mask');
+    if (wp_attachment_is_image($postID) == false) {
+        $file = get_attached_file($postID);
+        if (get_option('selupload_debug') == 1) {
+            $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
+                array('prefix' => __FUNCTION__ . '_', 'extension' => 'log'));
+            $log->info('Starts unload file');
+            $log->info('File path: ' . $file);
+            //$log->info("MetaData: \n" . selupload_dump($meta));
         }
 
-        return true;
-    }
+        if (get_option('selupload_lazyuploading') == 1) {
+            wp_schedule_single_event(time(), 'selupload_scheduleUpload', array($file));
+        } else {
+            selupload_fileUpload($file);
+        }
 
-    return false;
+
+    }
+    return true;
 }
 
-/*
- * Based on $metadata uploads thumbnails in cloud storage
- * @param array $metadata
- * @return array It returns the $metadata array does not change for further processing
+/**
+ * @param string *Full path to upload file
+ * @param int Number of attempts to upload the file
+ * @param bool *Delete the file from the server after unloading
+ *
+ * @return bool Successful load returns true, false otherwise
  */
-function selupload_thumbUpload($metadata)
+function selupload_fileUpload($pathToFile, $attempt = 0, $del = false)
 {
     if (get_option('selupload_debug') == 1) {
         $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
-            array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
-            $log->debug("Metadata dump:\n" . selupload_dump($metadata));
+            array('prefix' => __FUNCTION__ . '_' . time() . '_', 'extension' => 'log'));
+        if ($attempt > 0) {
+            $log->notice('Attempt № ' . $attempt);
+        }
     }
-    if (isset($metadata['file'])) {
-        try {
+    try {
+
+        if (get_option('selupload_debug') == 1 and isset($log)) {
+            $log->info("Path to thumbnail: " . $pathToFile);
+            if (selupload_checkForSync($pathToFile)) {
+                $log->info('File ' . $pathToFile . ' will be uploaded.');
+            } else {
+                $log->info('File ' . $pathToFile . ' does not fit the mask.');
+            }
+        }
+        if ((is_readable($pathToFile)) and (selupload_checkForSync($pathToFile))) {
             $connection = new Connection(get_option('selupload_username'), get_option('selupload_pass'),
                 array('authurl' => 'https://' . get_option('selupload_auth') . '/'), 15);
             if (get_option('selupload_debug') == 1 and isset($log)) {
@@ -174,65 +151,132 @@ function selupload_thumbUpload($metadata)
                 $log->debug("Container dump:\n" . selupload_dump($container));
             }
             if ($container instanceof \OpenStackStorage\Container) {
-                $upload_dir = wp_upload_dir();
+                $object = $container->createObject(selupload_getName($pathToFile));
                 if (get_option('selupload_debug') == 1 and isset($log)) {
-                    $log->info("Metadata file: " . $metadata['file']);
+                    $log->info("Instance - OK");
+                    $log->info("Name ObJ: " . selupload_getName($pathToFile));
+                    $log->info("Size: " . selupload_dump($object->getSize()));
                 }
-                foreach ($metadata['sizes'] as $thumb) {
-                    if (isset($thumb['file'])) {
-                        $path = $upload_dir['path'] . DIRECTORY_SEPARATOR . $thumb['file'];
-                        if (get_option('selupload_debug') == 1 and isset($log)) {
-                            $log->info("Path to thumbnail: " . $path);
-                            if (selupload_checkForSync($path)){
-                                $log->info('File ' . $path. ' will be uploaded.');
-                            }else{
-                                $log->info('File ' . $path. ' does not fit the mask.');
-                            }
-                        }
-                        if ((is_readable($path)) and (selupload_checkForSync($path))) {
+                if (((get_option('selupload_notoverewrite') == 1) and ($object->getSize() == sizeof($pathToFile))) == false) {
 
-                            if (((get_option('selupload_notoverewrite') == 1) and ($container->getObject(selupload_getName($path))->getSize() == sizeof($path))) == false) {
-
-                                $fp = fopen($path, 'r');
-                                $object = $container->createObject(selupload_getName($path));
-                                $object->write($fp);
-                                @fclose($fp);
-                                $object = $container->getObject(selupload_getName($path));
-                                if (get_option('selupload_debug') == 1 and isset($log)) {
-                                    if($object instanceof \OpenStackStorage\Object) {
-                                        $log->info("File " . $path . ' successfully uploaded');
-                                    }else{
-                                        $log->warning("File " . $path . ' not uploaded');
-                                    }
-                                }
-                                if ((($object instanceof \OpenStackStorage\Object) == true) and (get_option('selupload_delafter') == 1)) {
-                                    if (get_option('selupload_debug') == 1 and isset($log)) {
-                                        $log->info("File " . $path . ' deleted');
-                                    }
-                                    unlink($path);
-
-                                }
-                            }
-                        }
-                    }
-                }
-                if (get_option('selupload_debug') == 1 and isset($log)) {
-                    $log->info("Original file " . $upload_dir['basedir'] . DIRECTORY_SEPARATOR . $metadata['file'] . " getName - ".selupload_getName($upload_dir['basedir'] . DIRECTORY_SEPARATOR.$metadata['file']));
-                }
-                $object = $container->getObject(selupload_getName($upload_dir['basedir'] . DIRECTORY_SEPARATOR.$metadata['file']));
-                if ((($object instanceof \OpenStackStorage\Object) == true) and (get_option('selupload_delafter') == 1)
-                ) {
                     if (get_option('selupload_debug') == 1 and isset($log)) {
-                        $log->info("File " . $upload_dir['basedir'] . DIRECTORY_SEPARATOR . $metadata['file'] . ' deleted');
+                        $log->info("Overwrite test - OK");
                     }
-                    unlink($upload_dir['basedir'] . DIRECTORY_SEPARATOR . $metadata['file']);
+                    $fp = fopen($pathToFile, 'r');
+
+                    $object->write($fp);
+                    fclose($fp);
+                    $object = $container->getObject(selupload_getName($pathToFile));
+                    if (get_option('selupload_debug') == 1 and isset($log)) {
+                        $log->debug("Object dump:\n" . selupload_dump($object));
+
+                        if ($object instanceof \OpenStackStorage\Object) {
+                            $log->info("File " . $pathToFile . ' successfully uploaded');
+                        } else {
+                            $log->warning("File " . $pathToFile . ' not uploaded');
+                        }
+                    }
+
+                    if (($object instanceof \OpenStackStorage\Object) == true) {
+                        if (get_option('selupload_delafter') == 1) {
+                            if (get_option('selupload_debug') == 1 and isset($log)) {
+                                $log->info("File will be " . $pathToFile . ' deleted');
+                            }
+                            //unlink($pathToFile);
+                            if ($del === true) {
+                                selupload_delFile($pathToFile);
+                            } else {
+                                wp_schedule_single_event(time() + 60, 'selupload_delFile', array($pathToFile));
+                            }
+                        }
+                    } else {
+                        if ($attempt < 3) {
+                            wp_schedule_single_event(time() + 5, 'selupload_scheduleUpload',
+                                array($pathToFile, ++$attempt));
+                        }
+                    }
                 }
             }
-            return $metadata;
-        } catch (Exception $e) {
-            return $metadata;
-            //selupload_showMessage($e->getCode() . ' :: ' . $e->getMessage());
         }
+
+        return true;
+    } catch (Exception $e) {
+        if (get_option('selupload_debug') == 1 and isset($log)) {
+            $log->error($e->getCode() . ' :: ' . $e->getMessage());
+        }
+        if ($attempt < 3) {
+            wp_schedule_single_event(time() + 5, 'selupload_scheduleUpload', array($pathToFile, ++$attempt));
+        }
+
+        return false;
+    }
+}
+
+add_action('selupload_scheduleUpload', 'selupload_fileUpload');
+function selupload_delFile($file, $attempt = 0)
+{
+    if (file_exists($file)) {
+        if (is_writable($file)) {
+            if (get_option('selupload_debug') == 1) {
+                $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
+                    array('prefix' => __FUNCTION__ . '_', 'extension' => 'log'));
+            }
+            unlink($file);
+            if (get_option('selupload_debug') == 1 and isset($log)) {
+                $log->info("File " . $file . ' deleted');
+            }
+        } elseif ($attempt < 3) {
+            wp_schedule_single_event(time() + 10, 'selupload_delFile', array($file, ++$attempt));
+        }
+    }
+}
+
+add_action('selupload_delFile', 'selupload_delFile');
+/**
+ * Based on $metadata add schedule for uploads thumbnails in cloud storage
+ * @param array $metadata
+ * @return array It returns the $metadata array does not change for further processing
+ */
+function selupload_thumbUpload($metadata)
+{
+    if (get_option('selupload_debug') == 1) {
+        $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
+            array('prefix' => __FUNCTION__ . '_', 'extension' => 'log'));
+        $log->debug("Metadata dump:\n" . selupload_dump($metadata));
+    }
+    if (isset($metadata['file'])) {
+        $upload_dir = wp_upload_dir();
+        $path = $upload_dir['path'] . DIRECTORY_SEPARATOR . basename($metadata['file']);
+        if (get_option('selupload_lazyuploading') == 1) {
+            wp_schedule_single_event(time() + 2, 'selupload_scheduleUpload', array($path, 0, true));
+            if (get_option('selupload_debug') == 1 and isset($log)) {
+                $log->info("Add schedule. File - " . $path);
+            }
+        } else {
+            selupload_fileUpload($path, 0, true);
+            if (get_option('selupload_debug') == 1 and isset($log)) {
+                $log->info("Upload file - " . $path);
+            }
+        }
+        foreach ($metadata['sizes'] as $thumb) {
+            if (isset($thumb['file'])) {
+                $path = $upload_dir['path'] . DIRECTORY_SEPARATOR . $thumb['file'];
+                if (get_option('selupload_lazyuploading') == 1) {
+                    wp_schedule_single_event(time() + 2, 'selupload_scheduleUpload', array($path, 0, true));
+                    if (get_option('selupload_debug') == 1 and isset($log)) {
+                        $log->info("Add schedule. File - " . $path);
+                    }
+                } else {
+                    selupload_fileUpload($path, 0, true);
+                    if (get_option('selupload_debug') == 1 and isset($log)) {
+                        $log->info("Upload file - " . $path);
+                    }
+                }
+            }
+        }
+    }
+    if (get_option('selupload_debug') == 1 and isset($log)) {
+        $log->debug("Schedules dump: " . selupload_dump(_get_cron_array()));
     }
 
     return $metadata;
@@ -301,7 +345,7 @@ function selupload_inArray($needle, $haystack)
     return false;
 }
 
-/*
+/**
  * Checks if the file falls under the mask specified in the settings.
  * @param string @path Full path to file
  * @return bool
@@ -313,7 +357,7 @@ function selupload_checkForSync($path)
         $mask = '*';
     if (get_option('selupload_debug') == 1) {
         $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
-            array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
+            array('prefix' => __FUNCTION__ . '_', 'extension' => 'log'));
         $log->info('File path: ' . $path);
         $log->info('Short path: ' . selupload_getName($path));
         $log->info('File mask: ' . $mask);
@@ -343,7 +387,8 @@ function selupload_checkForSync($path)
 
 }
 
-/* Removes escaping characters in path or array of paths
+/**
+ * Removes escaping characters in path or array of paths
  * @param string|array $path
  * @return string|array
  */
@@ -364,7 +409,7 @@ function selupload_corURI($path)
 }
 
 /**
- * Function manual synch
+ * Function for manual synch
  */
 function selupload_allSynch()
 {
@@ -372,7 +417,7 @@ function selupload_allSynch()
         if (!empty($_POST['files'])) {
             if (get_option('selupload_debug') == 1) {
                 $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
-                    array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
+                    array('prefix' => __FUNCTION__ . '_', 'extension' => 'log'));
             }
             $files = selupload_corURI(explode('||', $_POST['files']));
             if (get_option('selupload_debug') == 1 and isset($log)) {
@@ -401,17 +446,18 @@ function selupload_allSynch()
                     fclose($fp);
                     $object = $container->getObject($filename);
                     if (get_option('selupload_debug') == 1 and isset($log)) {
-                        if($object instanceof \OpenStackStorage\Object) {
+                        if ($object instanceof \OpenStackStorage\Object) {
                             $log->info("File " . $filename . ' successfully uploaded');
-                        }else{
+                        } else {
                             $log->warning("File " . $filename . ' not uploaded');
                         }
                     }
                     if (($object instanceof \OpenStackStorage\Object) and get_option('selupload_delafter') == 1) {
                         if (get_option('selupload_debug') == 1 and isset($log)) {
-                                $log->info("File " . $filename . ' deleted');
+                            $log->info("File " . $filename . ' deleted');
                         }
-                        unlink($thisfile);
+                        //unlink($thisfile);
+                        selupload_delFile($thisfile);
                     } elseif (($object instanceof \OpenStackStorage\Object) !== true) {
                         $error = __('Impossible to upload a file',
                                 'selupload') . ': ' . $thisfile;
@@ -464,7 +510,7 @@ function selupload_allSynch()
 
 add_action('wp_ajax_selupload_allsynch', 'selupload_allSynch');
 
-/*
+/**
  * Create a page settings
  */
 function selupload_settingsPage()
@@ -493,7 +539,21 @@ function selupload_settingsPage()
                     if (get_option('selupload_filter') == null) {
                         update_option('selupload_filter', '*');
                     }
+                    if (get_option('selupload_path_in_storage') == null) {
+                        update_option('selupload_path_in_storage', '/');
+                    }
                     ?>
+                    <script type="text/javascript" language="JavaScript">
+                        <?php
+                        $upload_dir = wp_upload_dir();
+                        $files = selupload_getFilesArr($upload_dir['basedir']);
+                        echo 'var files_arr = ' . json_encode(implode('||', $files)) . ';' . PHP_EOL . 'var files_count = ' . count($files) . ';' . PHP_EOL;
+                        $first_file = array_shift($files);
+                        $first_file == NULL ? $first_file = 'wp-content/uploads/file.jpg' : $first_file = ltrim($first_file, get_option('upload_path'));
+                        $first_file = str_replace('\\', '/', $first_file);
+                        echo 'var selupload_first_file = \'' . addslashes($first_file) . '\';' . PHP_EOL;
+                        ?>
+                    </script>
                     <form method="post" action="options.php">
                         <?php settings_fields('selupload_settings'); ?>
                         <fieldset class="options">
@@ -503,7 +563,7 @@ function selupload_settingsPage()
                                     <td colspan="2"><?php _e(
                                             'Type the information for access to your container.',
                                             'selupload'
-                                        );?> <?php _e('No account? <a href ="http://goo.gl/8Z0q8H">Sign up</a>',
+                                        ); ?><?php _e('No account? <a href ="http://goo.gl/8Z0q8H">Sign up</a>',
                                             'selupload'); ?></td>
                                 </tr>
                                 <tr>
@@ -585,6 +645,27 @@ function selupload_settingsPage()
                                             'selupload'); ?>.
                                     </td>
                                 </tr>
+
+                                <tr>
+                                    <td><label for="selupload_path_in_storage"><b><?php _e(
+                                                    'Prefix the path in the storage',
+                                                    'selupload'
+                                                ); ?>:</b></label></td>
+                                    <td>
+                                        <input id="selupload_path_in_storage" name="selupload_path_in_storage"
+                                               type="text"
+                                               size="15" value="<?php echo esc_attr(
+                                            get_option('selupload_path_in_storage')
+                                        ); ?>" class="regular-text code"/>
+
+                                        <p class="description">
+                                            <?php _e(
+                                                'The path to the file in the storage will appear as a prefix / path.<br />For example, in your case:',
+                                                'selupload'
+                                            ); ?>
+                                            <code id="selupload_path_in_storage_code"><?php echo get_option('selupload_path_in_storage') . $first_file; ?></code>
+                                    </td>
+                                </tr>
                                 <tr>
                                     <td><label for="selupload_auth"><b><?php _e(
                                                     'Authorization server',
@@ -633,7 +714,8 @@ function selupload_settingsPage()
                                                     'selupload'
                                                 ); ?>).</code></p>
 
-                                        <p class="description"><?php _e('The file will be deleted from the hosting after a successful download. It will only copy in the Selectel Storage',
+                                        <p class="description"
+                                           style="color: #ff2222;"><?php _e('The file will be deleted from the hosting after a successful download. It will only copy in the Selectel Storage',
                                                 'selupload'); ?>.</p>
 
                                         <p>
@@ -648,6 +730,21 @@ function selupload_settingsPage()
                                                 ); ?>.</label></p>
 
                                         <p>
+                                            <input id="selupload_lazyuploading" type="checkbox"
+                                                   name="selupload_lazyuploading"
+                                                   value="1" <?php checked(
+                                                get_option('selupload_lazyuploading'),
+                                                1
+                                            ); ?> />
+                                            <label for="selupload_lazyuploading"><?php _e(
+                                                    'Deferred upload files',
+                                                    'selupload'
+                                                ); ?></label><code>(<?php _e(
+                                                    'Files are uploaded to the delay. It protects against errors when uploading large files.',
+                                                    'selupload'
+                                                ); ?>)</code></p>
+
+                                        <p>
                                             <input id="selupload_notoverewrite" type="checkbox"
                                                    name="selupload_notoverewrite"
                                                    value="1" <?php checked(
@@ -655,7 +752,7 @@ function selupload_settingsPage()
                                                 1
                                             ); ?> />
                                             <label
-                                                for="selupload_notoverewrite"><?php _e('Do not overwrite the file if it already exists in the storage',
+                                                    for="selupload_notoverewrite"><?php _e('Do not overwrite the file if it already exists in the storage',
                                                     'selupload'); ?>.</label></p>
 
                                         <p>
@@ -666,7 +763,7 @@ function selupload_settingsPage()
                                                 1
                                             ); ?> />
                                             <label
-                                                for="selupload_debug"><?php _e('Enable debug mode. Do not enable unless you know what it is.',
+                                                    for="selupload_debug"><?php _e('Enable debug mode. Do not enable unless you know what it is.',
                                                     'selupload'); ?></label></p>
                                     </td>
                                 </tr>
@@ -680,13 +777,7 @@ function selupload_settingsPage()
                         <div></div>
                     </div>
                     <div id="selupload_synchtext" style="display: none" class="error"></div>
-                    <script type="text/javascript" language="JavaScript">
-                        <?php
-                            $upload_dir = wp_upload_dir();
-                            $files = selupload_getFilesArr($upload_dir['basedir']);
-                            echo 'var files_arr = '.json_encode(implode('||',$files)).';'."\n".'var files_count = '.count($files).';'."\n";
-                        ?>
-                    </script>
+
                     <form method="post">
                         <input type="button" name="archive" id="submit" class="synch button button-primary"
                                value="<?php _e('Full synchronization', 'selupload'); ?>"
@@ -753,10 +844,10 @@ function selupload_settingsPage()
             </tr>
         </table>
     </div>
-<?php
+    <?php
 }
 
-/*
+/**
  * The function creates the admin menu
  */
 function selupload_createMenu()
@@ -771,11 +862,11 @@ function selupload_createMenu()
     add_action('admin_init', 'selupload_regsettings');
 }
 
-/*
+/**
  * Add admin menu
  */
 add_action('admin_menu', 'selupload_createMenu');
-/*
+/**
  * Deletes the file from the clouds before removing from the server
  * @param string $file Full path ro file
  * @return string
@@ -785,7 +876,7 @@ function selupload_cloudDelete($file)
     try {
         if (get_option('selupload_debug') == 1) {
             $log = new Katzgrau\KLogger\Logger(plugin_dir_path(__FILE__) . '/logs', Psr\Log\LogLevel::DEBUG,
-                array('prefix' => __FUNCTION__ . '_','extension' => 'log'));
+                array('prefix' => __FUNCTION__ . '_', 'extension' => 'log'));
         }
         $connection = new Connection(get_option('selupload_username'), get_option('selupload_pass'),
             array('authurl' => 'https://' . get_option('selupload_auth') . '/'));
@@ -797,10 +888,12 @@ function selupload_cloudDelete($file)
             $log->debug("Container dump\n" . selupload_dump($container));
         }
         $container->deleteObject(selupload_getName($file));
-        unlink($file);
+        //unlink($file);
+        selupload_delFile($file);
         if (get_option('selupload_debug') == 1 and isset($log)) {
             $log->info("Delete file:\n" . $file);
         }
+
         return $file;
     } catch (Exception $e) {
         return $file;
@@ -812,7 +905,7 @@ if (get_option('selupload_del') == 1) {
     add_filter('wp_delete_file', 'selupload_cloudDelete', 10, 1);
 }
 
-/*
+/**
  * Function registration js files
  */
 function selupload_scripts()
@@ -820,7 +913,7 @@ function selupload_scripts()
     wp_enqueue_script('selupload_js', plugins_url('/js/script.js', __FILE__), array('jquery'), '1.4.0', true);
 }
 
-/*
+/**
  * Function registration css files
  */
 function selupload_stylesheetToAdmin()
@@ -828,24 +921,24 @@ function selupload_stylesheetToAdmin()
     wp_enqueue_style('selupload-progress', plugins_url('css/admin.css', __FILE__));
 }
 
-/*
+/**
  * Add filter to thumbnail
  */
-add_filter('wp_generate_attachment_metadata', 'selupload_thumbUpload', 10, 1);
-/*
+add_filter('wp_generate_attachment_metadata', 'selupload_thumbUpload', 100, 1);
+/**
  * Add filter to attachment
  */
-add_action('add_attachment', 'selupload_cloudUpload', 10, 1);
-/*
+add_action('add_attachment', 'selupload_cloudUpload', 100, 1);
+/**
  * Registration css files
  */
 add_action('admin_enqueue_scripts', 'selupload_stylesheetToAdmin');
-/*
+/**
  * Registration js files
  */
 add_action('admin_enqueue_scripts', 'selupload_scripts');
 
-/*
+/**
  * Registration settings
  */
 function selupload_regsettings()
@@ -855,10 +948,12 @@ function selupload_regsettings()
     register_setting('selupload_settings', 'selupload_container');
     register_setting('selupload_settings', 'selupload_pass');
     register_setting('selupload_settings', 'selupload_username');
+    register_setting('selupload_settings', 'selupload_path_in_storage');
     register_setting('selupload_settings', 'selupload_delafter');
     register_setting('selupload_settings', 'upload_url_path');
     register_setting('selupload_settings', 'selupload_del');
     register_setting('selupload_settings', 'selupload_filter');
     register_setting('selupload_settings', 'selupload_notoverewrite');
     register_setting('selupload_settings', 'selupload_debug');
+    register_setting('selupload_settings', 'selupload_lazyuploading');
 }
