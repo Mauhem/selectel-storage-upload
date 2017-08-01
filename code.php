@@ -258,18 +258,20 @@ function selupload_thumbUpload($metadata)
                 $log->info("Upload file - " . $path);
             }
         }
-        foreach ($metadata['sizes'] as $thumb) {
-            if (isset($thumb['file'])) {
-                $path = $upload_dir['path'] . DIRECTORY_SEPARATOR . $thumb['file'];
-                if (get_option('selupload_lazyuploading') == 1) {
-                    wp_schedule_single_event(time() + 2, 'selupload_scheduleUpload', array($path, 0, true));
-                    if (get_option('selupload_debug') == 1 and isset($log)) {
-                        $log->info("Add schedule. File - " . $path);
-                    }
-                } else {
-                    selupload_fileUpload($path, 0, true);
-                    if (get_option('selupload_debug') == 1 and isset($log)) {
-                        $log->info("Upload file - " . $path);
+        if (isset($metadata['sizes'])) {
+            foreach ($metadata['sizes'] as $thumb) {
+                if (isset($thumb['file'])) {
+                    $path = $upload_dir['path'] . DIRECTORY_SEPARATOR . $thumb['file'];
+                    if (get_option('selupload_lazyuploading') == 1) {
+                        wp_schedule_single_event(time() + 2, 'selupload_scheduleUpload', array($path, 0, true));
+                        if (get_option('selupload_debug') == 1 and isset($log)) {
+                            $log->info("Add schedule. File - " . $path);
+                        }
+                    } else {
+                        selupload_fileUpload($path, 0, true);
+                        if (get_option('selupload_debug') == 1 and isset($log)) {
+                            $log->info("Upload file - " . $path);
+                        }
                     }
                 }
             }
